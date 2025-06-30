@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GridTail</title>
+    <style>
+        body {
+            background-color: #e0f2ff;
+            font-family: 'Verdana', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+        h1 {
+            color: #0b4a8d;
+            text-shadow: 2px 2px #fff;
+            text-align: center;
+        }
+        #game-wrapper {
+            position: relative;
+            width: 600px;
+            height: 400px;
+            border: 8px solid #a3d5ff;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            border-radius: 7px;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        #stats-bar {
+            margin-top: 15px;
+            background-color: #fff;
+            padding: 10px 25px;
+            border-radius: 12px;
+            border: 4px solid #a3d5ff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        #score-display {
+            font-size: 28px;
+            font-weight: bold;
+            color: #0b4a8d;
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            border-radius: 7px;
+            z-index: 20;
+        }
+        .overlay h2 {
+            font-size: 48px;
+            margin: 0;
+            text-shadow: 3px 3px #000;
+        }
+        .overlay p {
+            font-size: 22px;
+            margin: 10px 0 25px 0;
+            max-width: 80%;
+        }
+        #game-over-screen {
+            display: none;
+        }
+        .action-button {
+            padding: 15px 30px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #34a853;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        .action-button:hover {
+            background-color: #2c8f45;
+        }
+        #difficulty-up-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 50px;
+            font-weight: bold;
+            color: #ff4500;
+            text-shadow: 3px 3px #fff, -3px -3px #fff, 3px -3px #fff, -3px 3px #fff;
+            opacity: 0;
+            z-index: 15;
+            pointer-events: none;
+        }
+        #difficulty-up-message.visible {
+            animation: fadeInOut 2s ease-in-out;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            10%, 90% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        #mobile-controls {
+            display: none;
+            margin-top: 15px;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 10px;
+            width: 240px;
+        }
+        .control-btn {
+            background-color: #4a90e2;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            border: 2px solid white;
+            border-radius: 15px;
+            padding: 15px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .control-btn:active { background-color: #357abd; }
+        #up-btn    { grid-column: 2; grid-row: 1; }
+        #left-btn  { grid-column: 1; grid-row: 2; }
+        #right-btn { grid-column: 3; grid-row: 2; }
+        #down-btn  { grid-column: 2; grid-row: 2; }
+
+        /* --- Help Modal Styles --- */
+        #help-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background-color: #0b4a8d;
+            color: white;
+            font-size: 30px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 100;
+            transition: transform 0.2s, background-color 0.2s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #help-button:hover {
+            background-color: #083b70;
+            transform: scale(1.1);
+        }
+        #help-modal {
+            display: none; /* Hidden by default */
+            z-index: 110;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        #help-content {
+            background-color: #fff;
+            color: #333;
+            padding: 20px 40px;
+            border-radius: 15px;
+            position: relative;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            text-align: left;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        #help-content h2 {
+            color: #0b4a8d;
+            text-shadow: none;
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+        #close-help-button {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 35px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        #close-help-button:hover { color: #333; }
+        #help-content ul { list-style: none; padding: 0; margin: 0; }
+        #help-content li { font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; }
+        .item-icon {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            margin-right: 15px;
+            border: 1px solid #ccc;
+            text-align: center;
+            line-height: 24px;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .rainbow-icon { background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet); }
+        #help-content p { font-size: 16px; text-align: center; margin-top: 25px; color: #555; max-width: none; }
+        .special-item span { margin-right: 15px; font-size: 22px; display: inline-block; width: 24px; text-align: center; }
+
+        @media (max-width: 768px) {
+            #mobile-controls { display: grid; }
+        }
+    </style>
+</head>
+<body>
+    <h1>GridTail</h1>
+
+    <div id="game-wrapper">
+        <div id="start-screen" class="overlay">
+            <h2>GridTail</h2>
+            <p>Use keyboard or on-screen controls. The game will randomly speed up. Good luck!</p>
+            <button id="start-button" class="action-button">Click to Start</button>
+        </div>
+        <div id="game-over-screen" class="overlay">
+            <h2>Game Over!</h2>
+            <p id="final-score"></p>
+            <button id="restart-button" class="action-button">Play Again</button>
+        </div>
+        <div id="game-container">
+            <div id="difficulty-up-message">SPEED UP!</div>
+            <canvas id="gameCanvas" width="600" height="400"></canvas>
+        </div>
+    </div>
+
+    <div id="stats-bar">
+        <div id="score-display">Score: 0</div>
+    </div>
+
+    <div id="mobile-controls">
+        <button id="up-btn" class="control-btn">↑</button>
+        <button id="left-btn" class="control-btn">←</button>
+        <button id="down-btn" class="control-btn">↓</button>
+        <button id="right-btn" class="control-btn">→</button>
+    </div>
+
+    <div id="help-button">?</div>
+
+    <div id="help-modal" class="overlay">
+        <div id="help-content">
+            <span id="close-help-button">×</span>
+            <h2>Point System</h2>
+            <ul>
+                <li><span class="item-icon" style="background-color: #FFD700;"></span> Yellow Negg: +10 Points</li>
+                <li><span class="item-icon" style="background-color: #DC143C;"></span> Red Negg: +30 Points</li>
+                <li><span class="item-icon" style="background-color: #4169E1;"></span> Blue Negg: +50 Points</li>
+                <li><span class="item-icon" style="background-color: #CD7F32;"></span> Bronze Negg: +75 Points</li>
+                <li><span class="item-icon" style="background-color: #C0C0C0;"></span> Silver Negg: +125 Points</li>
+                <li><span class="item-icon" style="background-color: #DAA520;"></span> Gold Negg: +200 Points</li>
+                <li><span class="item-icon rainbow-icon"></span> Rainbow Negg: +500 Points</li>
+                <li><span class="item-icon">💎</span> Diamond Negg: +1000 Points</li>
+                <li class="special-item"><span>🐟</span> Fish: -200 Points</li>
+                <li class="special-item"><span>❤️</span> Heart: Resets your Tail</li>
+                <li class="special-item"><span>💣</span> Bomb: Game Over!</li>
+            </ul>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Game Setup & Constants ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const scoreDisplay = document.getElementById('score-display');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+        const difficultyMessage = document.getElementById('difficulty-up-message');
+
+        const GRID_SIZE = 20;
+        const MAX_NEGG_COUNT = 3;
+        const DIFFICULTY_INCREASE_CHANCE = 0.20;
+        const HEART_SPAWN_CHANCE = 0.02;
+        const HEART_SPAWN_LENGTH = 16; // Changed: 1 head + 15 tail segments
+
+        // --- Data ---
+        const DEFAULT_CHARACTER = { headColor: '#a0522d', bodyColor: '#cd853f' };
+        const BRONZE_COLORS = { base: '#CD7F32', highlight: '#E6A86D' };
+        const SILVER_COLORS = { base: '#C0C0C0', highlight: '#F0F0F0' };
+        const GOLD_COLORS = { base: '#DAA520', highlight: '#FFD700' };
+        const DIAMOND_COLORS = { base: '#B9F2FF', highlight: '#E3FFFF' };
+        const RAINBOW_COLORS = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
+        
+        const ITEM_TYPES = {
+            YELLOW:  { color: '#FFD700', value: 10, probability: 0.56 },
+            RED:     { color: '#DC143C', value: 30, probability: 0.25 },
+            BLUE:    { color: '#4169E1', value: 50, probability: 0.10 },
+            BRONZE:  { color: BRONZE_COLORS.base, value: 75, probability: 0.03, isRare: true, effect: 'bronze' },
+            SILVER:  { color: SILVER_COLORS.base, value: 125, probability: 0.015, isRare: true, effect: 'silver' },
+            GOLD:    { color: GOLD_COLORS.base, value: 200, probability: 0.004, isRare: true, effect: 'gold' },
+            RAINBOW: { color: 'rainbow', value: 500, probability: 0.0009, isRare: true, effect: 'rainbow' },
+            DIAMOND: { emoji: '💎', color: DIAMOND_COLORS.base, value: 1000, probability: 0.0001, isRare: true, effect: 'diamond' },
+            FISH:    { emoji: '🐟', key: 'FISH', value: -200, probability: 0.04 },
+            HEART:   { emoji: '❤️', key: 'HEART', effect: 'tail_reset' },
+            BOMB:    { key: 'BOMB', isBad: true },
+        };
+        
+        const DIFFICULTY_LEVELS = [
+            { level: 1, speed: 100, bombRate: 5, multiChance: 0.15, neggLifespan: 5000 },
+            { level: 2, speed: 90,  bombRate: 4, multiChance: 0.20, neggLifespan: 4500 },
+            { level: 3, speed: 80,  bombRate: 4, multiChance: 0.25, neggLifespan: 4000 },
+            { level: 4, speed: 70,  bombRate: 3, multiChance: 0.30, neggLifespan: 3500 },
+            { level: 5, speed: 60,  bombRate: 3, multiChance: 0.35, neggLifespan: 3000 },
+            { level: 6, speed: 60,  bombRate: 2, multiChance: 0.40, neggLifespan: 2500 },
+            { level: 7, speed: 55,  bombRate: 2, multiChance: 0.45, neggLifespan: 2000 },
+            { level: 8, speed: 55,  bombRate: 2, multiChance: 0.50, neggLifespan: 1500 },
+            { level: 9, speed: 50,  bombRate: 2, multiChance: 0.50, neggLifespan: 1000 },
+        ];
+
+        const BACKGROUND_STYLES = [
+            { type: 'color', value: '#faffd4' },
+            { type: 'color', value: '#e6ffe6' },
+            { type: 'color', value: '#ffe6e6' },
+            { type: 'grid', bgColor: '#e0e0e0', lineColor: '#ababab' }, // Changed: Lighter gray for better visibility
+            { type: 'space', bgColor: '#00001a', starCount: 100 },
+            { type: 'rainbow' }
+        ];
+
+        // --- Game State ---
+        let meerca, direction, nextDirection, onScreenItems, score, isGameOver, gameLoopTimeout;
+        let currentBodyColor, neggsEatenCounter, frameCounter, activeEffect, sparkles;
+        let currentDifficultyIndex, gameSpeed, bombSpawnRate, multiSpawnChance, currentNeggLifespan;
+        let activeBackground, stars, lastBackgroundIndex = -1;
+
+        // --- Game Logic ---
+        function init() {
+            meerca = [{ x: 10 * GRID_SIZE, y: 10 * GRID_SIZE }];
+            direction = 'right'; nextDirection = 'right'; score = 0; isGameOver = false;
+            onScreenItems = []; sparkles = []; neggsEatenCounter = 0; frameCounter = 0;
+            activeEffect = 'none'; currentBodyColor = DEFAULT_CHARACTER.bodyColor;
+            setDifficulty(0);
+
+            // Select a new, non-repeating background
+            let newIndex;
+            do {
+                newIndex = Math.floor(Math.random() * BACKGROUND_STYLES.length);
+            } while (BACKGROUND_STYLES.length > 1 && newIndex === lastBackgroundIndex);
+            lastBackgroundIndex = newIndex;
+            activeBackground = BACKGROUND_STYLES[newIndex];
+
+            if (activeBackground.type === 'space') {
+                generateStars(activeBackground.starCount);
+            }
+            
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            scoreDisplay.textContent = `Score: 0`;
+            clearAllTimeouts();
+            spawnCollectible();
+            mainLoop();
+        }
+
+        function mainLoop() { if (isGameOver) { showGameOver(); return; } gameLoopTimeout = setTimeout(() => { frameCounter++; update(); draw(); mainLoop(); }, gameSpeed); }
+        function update() { const head = { ...meerca[0] }; direction = nextDirection; if (direction === 'up') head.y -= GRID_SIZE; if (direction === 'down') head.y += GRID_SIZE; if (direction === 'left') head.x -= GRID_SIZE; if (direction === 'right') head.x += GRID_SIZE; if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height || checkSelfCollision(head)) { isGameOver = true; return; } meerca.unshift(head); checkTailCollisions(); let itemEaten = false; for (let i = onScreenItems.length - 1; i >= 0; i--) { const item = onScreenItems[i]; if (head.x === item.x && head.y === item.y) { handleItemCollection(item, i); itemEaten = true; break; } } if (!itemEaten) meerca.pop(); updateSparkles(); onScreenItems = onScreenItems.filter(item => { if (!item.lifespan) return true; return (Date.now() - item.spawnTime) < item.lifespan; }); if (!isGameOver && !onScreenItems.some(i => i.type.key !== 'BOMB' && i.type.key !== 'HEART')) { spawnCollectible(); } }
+        function handleItemCollection(item, index) { if (item.type.key === 'BOMB') { isGameOver = true; return; } if (item.type.effect === 'tail_reset') { meerca = [ meerca[0] ]; onScreenItems.splice(index, 1); activeEffect = 'none'; return; } score = Math.max(0, score + item.type.value); scoreDisplay.textContent = `Score: ${score}`; if (item.type.value > 0) { if (Math.random() < DIFFICULTY_INCREASE_CHANCE) increaseDifficulty(); if (neggsEatenCounter % bombSpawnRate === 0) spawnItem(ITEM_TYPES.BOMB); trySpawnHeart(); } onScreenItems.splice(index, 1); neggsEatenCounter++; activeEffect = item.type.effect ? item.type.effect : 'none'; if (activeEffect === 'none') currentBodyColor = item.type.color; if (Math.random() < multiSpawnChance) spawnMultiNeggEvent(); else spawnCollectible(); }
+        function setDifficulty(levelIndex) { const level = DIFFICULTY_LEVELS[levelIndex]; currentDifficultyIndex = levelIndex; gameSpeed = level.speed; bombSpawnRate = level.bombRate; multiSpawnChance = level.multiChance; currentNeggLifespan = level.neggLifespan; }
+        function increaseDifficulty() { const nextLevelIndex = currentDifficultyIndex + 1; if (nextLevelIndex < DIFFICULTY_LEVELS.length) { setDifficulty(nextLevelIndex); flashDifficultyMessage(); } }
+        function flashDifficultyMessage() { difficultyMessage.classList.add('visible'); setTimeout(() => { difficultyMessage.classList.remove('visible'); }, 2000); }
+        function checkTailCollisions() { const tail = meerca.slice(1); if (tail.length === 0) return; for (let i = onScreenItems.length - 1; i >= 0; i--) { const item = onScreenItems[i]; if (item.type.key === 'FISH') { for (const segment of tail) { if (segment.x === item.x && segment.y === item.y) { score = Math.max(0, score + item.type.value); scoreDisplay.textContent = `Score: ${score}`; onScreenItems.splice(i, 1); return; } } } } }
+        function spawnMultiNeggEvent() { const rareNeggs = Object.values(ITEM_TYPES).filter(t => t.isRare); const numToSpawn = Math.random() < 0.7 ? 2 : 3; if (onScreenItems.filter(i => i.type.value > 0).length < MAX_NEGG_COUNT) { const chosenRareNegg = rareNeggs[Math.floor(Math.random() * rareNeggs.length)]; spawnItem(chosenRareNegg); } for (let i = 1; i < numToSpawn; i++) { if (onScreenItems.filter(it => it.type.value > 0).length < MAX_NEGG_COUNT) { spawnCollectible(); } } }
+        function spawnCollectible() { if (onScreenItems.filter(i => i.type.value).length >= MAX_NEGG_COUNT) return; const spawnPool = Object.values(ITEM_TYPES).filter(t => t.probability); let rand = Math.random(); let chosenType; for (const type of spawnPool) { rand -= type.probability; if (rand <= 0) { chosenType = type; break; } } spawnItem(chosenType || ITEM_TYPES.YELLOW); }
+        function trySpawnHeart() { if (meerca.length >= HEART_SPAWN_LENGTH && !onScreenItems.some(i => i.type.key === 'HEART')) { if (Math.random() < HEART_SPAWN_CHANCE) { spawnItem(ITEM_TYPES.HEART); } } }
+        function spawnItem(itemType) { let position; do { position = { x: Math.floor(Math.random() * (canvas.width / GRID_SIZE)) * GRID_SIZE, y: Math.floor(Math.random() * (canvas.height / GRID_SIZE)) * GRID_SIZE }; } while (meerca.some(s => s.x === position.x && s.y === position.y) || onScreenItems.some(i => i.x === position.x && i.y === position.y)); const newItem = { ...position, type: itemType }; if (itemType.key === 'HEART') { newItem.lifespan = 3000; newItem.spawnTime = Date.now(); } else if (!itemType.isBad) { newItem.lifespan = currentNeggLifespan; newItem.spawnTime = Date.now(); } onScreenItems.push(newItem); }
+        function checkSelfCollision(head) { return meerca.length > 1 && meerca.slice(1).some(s => s.x === head.x && s.y === head.y); }
+
+        function generateStars(count) { stars = []; for (let i = 0; i < count; i++) { stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, radius: Math.random() * 1.5 }); } }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            drawMeerca();
+            drawItems();
+            drawSparkles();
+        }
+
+        function drawBackground() {
+            switch(activeBackground.type) {
+                case 'color': ctx.fillStyle = activeBackground.value; ctx.fillRect(0, 0, canvas.width, canvas.height); break;
+                case 'grid': ctx.fillStyle = activeBackground.bgColor; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = activeBackground.lineColor; ctx.lineWidth = 1; for (let x = 0; x <= canvas.width; x += GRID_SIZE) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); } for (let y = 0; y <= canvas.height; y += GRID_SIZE) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); } break;
+                case 'space': ctx.fillStyle = activeBackground.bgColor; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = 'white'; stars.forEach(star => { ctx.beginPath(); ctx.arc(star.x, star.y, star.radius, 0, 2 * Math.PI); ctx.fill(); }); break;
+                case 'rainbow': const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height); gradient.addColorStop(0, '#ffadad'); gradient.addColorStop(0.2, '#ffd6a5'); gradient.addColorStop(0.4, '#fdffb6'); gradient.addColorStop(0.6, '#caffbf'); gradient.addColorStop(0.8, '#9bf6ff'); gradient.addColorStop(1, '#a0c4ff'); ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height); break;
+                default: ctx.fillStyle = '#faffd4'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        function drawMeerca() {
+            ctx.fillStyle = DEFAULT_CHARACTER.headColor; ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 2; ctx.fillRect(meerca[0].x, meerca[0].y, GRID_SIZE, GRID_SIZE); ctx.strokeRect(meerca[0].x, meerca[0].y, GRID_SIZE, GRID_SIZE);
+            for (let i = 1; i < meerca.length; i++) {
+                const segment = meerca[i];
+                let segmentColor;
+                switch(activeEffect) {
+                    case 'rainbow': segmentColor = RAINBOW_COLORS[(i + frameCounter) % RAINBOW_COLORS.length]; break;
+                    case 'bronze': segmentColor = ((i + frameCounter) % 4 === 0) ? BRONZE_COLORS.highlight : BRONZE_COLORS.base; break;
+                    case 'silver': segmentColor = ((i + frameCounter) % 4 === 0) ? SILVER_COLORS.highlight : SILVER_COLORS.base; break;
+                    case 'gold': segmentColor = ((i + frameCounter) % 4 === 0) ? GOLD_COLORS.highlight : GOLD_COLORS.base; break;
+                    case 'diamond': segmentColor = ((i + frameCounter) % 4 === 0) ? DIAMOND_COLORS.highlight : DIAMOND_COLORS.base; break;
+                    default: segmentColor = currentBodyColor;
+                }
+                // Changed: Apply sparkles to rainbow effect as well
+                if (activeEffect !== 'none') {
+                    if (Math.random() > 0.8) sparkles.push({ x: segment.x + Math.random() * GRID_SIZE, y: segment.y + Math.random() * GRID_SIZE, size: Math.random() * 3 + 1, life: 20 });
+                }
+                ctx.fillStyle = segmentColor;
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                ctx.fillRect(segment.x, segment.y, GRID_SIZE, GRID_SIZE);
+                ctx.strokeRect(segment.x, segment.y, GRID_SIZE, GRID_SIZE);
+            }
+        }
+        
+        function drawSparkles() { for (const p of sparkles) { ctx.globalAlpha = p.life / 20; ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 2 * Math.PI); ctx.fill(); } ctx.globalAlpha = 1.0; }
+        function drawItems() { onScreenItems.forEach(item => { const centerX = item.x + GRID_SIZE / 2; const centerY = item.y + GRID_SIZE / 2; if (item.type.emoji) { if (item.type.key === 'FISH') { ctx.font = '24px sans-serif'; } else { ctx.font = '22px sans-serif'; } ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(item.type.emoji, centerX, centerY); } else if (item.type.key === 'BOMB') { ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(centerX, centerY, GRID_SIZE / 2 - 2, 0, 2 * Math.PI); ctx.fill(); ctx.strokeStyle = 'orange'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(centerX, centerY - 5); ctx.lineTo(centerX + 3, centerY - 10); ctx.stroke(); } else { const radius = GRID_SIZE / 2 - 2; if (item.type.color === 'rainbow') { const g = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius); g.addColorStop(0, 'red'); g.addColorStop(0.4, 'yellow'); g.addColorStop(0.8, 'blue'); g.addColorStop(1, 'purple'); ctx.fillStyle = g; } else { ctx.fillStyle = item.type.color; } ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); } }); }
+        
+        function updateSparkles() { for (let i = sparkles.length - 1; i >= 0; i--) { sparkles[i].life--; if (sparkles[i].life <= 0) sparkles.splice(i, 1); } }
+        function showGameOver() { clearAllTimeouts(); finalScoreDisplay.textContent = `Your Score: ${score}`; gameOverScreen.style.display = 'flex'; }
+        function clearAllTimeouts() { clearTimeout(gameLoopTimeout); let id = window.setTimeout(null, 0); while (id--) window.clearTimeout(id); }
+        function handleDirectionInput(newDirection) { if (newDirection === 'up' && direction !== 'down') nextDirection = 'up'; else if (newDirection === 'down' && direction !== 'up') nextDirection = 'down'; else if (newDirection === 'left' && direction !== 'right') nextDirection = 'left'; else if (newDirection === 'right' && direction !== 'left') nextDirection = 'right'; }
+        document.addEventListener('keydown', e => { const key = e.key; if (key === 'ArrowUp' || key === 'w') handleDirectionInput('up'); else if (key === 'ArrowDown' || key === 's') handleDirectionInput('down'); else if (key === 'ArrowLeft' || key === 'a') handleDirectionInput('left'); else if (key === 'ArrowRight' || key === 'd') handleDirectionInput('right'); });
+        document.getElementById('up-btn').addEventListener('touchstart', e => { e.preventDefault(); handleDirectionInput('up'); });
+        document.getElementById('down-btn').addEventListener('touchstart', e => { e.preventDefault(); handleDirectionInput('down'); });
+        document.getElementById('left-btn').addEventListener('touchstart', e => { e.preventDefault(); handleDirectionInput('left'); });
+        document.getElementById('right-btn').addEventListener('touchstart', e => { e.preventDefault(); handleDirectionInput('right'); });
+        startButton.addEventListener('click', init);
+        restartButton.addEventListener('click', init);
+
+        // --- Help Modal Logic ---
+        const helpButton = document.getElementById('help-button');
+        const helpModal = document.getElementById('help-modal');
+        const closeHelpButton = document.getElementById('close-help-button');
+
+        helpButton.addEventListener('click', () => {
+            helpModal.style.display = 'flex';
+        });
+
+        closeHelpButton.addEventListener('click', () => {
+            helpModal.style.display = 'none';
+        });
+
+        // Close modal if user clicks the dark overlay area
+        helpModal.addEventListener('click', (e) => {
+            if (e.target === helpModal) {
+                helpModal.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
