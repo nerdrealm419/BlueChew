@@ -282,6 +282,94 @@
         const playerNameInput = document.getElementById('player-name-input');
         const submitScoreButton = document.getElementById('submit-score-button');
 
+        let isFirstLoad = true;
+        const SPLASH_FADE_TIME = 1.5; // Animation duration in seconds
+        const SPLASH_HOLD_TIME = 2.0; // How long the logo stays on screen
+        let splashPhase = 'fade-in';  // Controls the current animation state
+        let splashTimer = 0;
+        let splashOpacity = 0;
+        let lastSplashFrameTime = 0;
+        let splashLoopId;
+
+        const splashImage = new Image();
+        let splashImageLoaded = false;
+        // This is the image URL you provided
+        splashImage.src = 'https://nerdrealm419.github.io/Go-Go-Monkey-Go-v1/splash-screen.png';
+        splashImage.onload = () => { splashImageLoaded = true; };
+
+        function updateSplashScreen(dt) {
+            if (splashPhase === 'finished') return;
+    
+            splashTimer += dt;
+    
+            switch (splashPhase) {
+                case 'fade-in':
+                    splashOpacity = Math.min(1.0, splashTimer / SPLASH_FADE_TIME);
+                    if (splashTimer >= SPLASH_FADE_TIME) {
+                        splashPhase = 'hold';
+                        splashTimer = 0;
+                    }
+                    break;
+                case 'hold':
+                    if (splashTimer >= SPLASH_HOLD_TIME) {
+                        splashPhase = 'fade-out';
+                        splashTimer = 0;
+                    }
+                    break;
+                case 'fade-out':
+                    splashOpacity = Math.max(0.0, 1.0 - (splashTimer / SPLASH_FADE_TIME));
+                    if (splashTimer >= SPLASH_FADE_TIME) {
+                        // When finished, flip the flag and show the original start screen
+                        splashPhase = 'finished';
+                        isFirstLoad = false; 
+                        startScreen.style.display = 'flex'; 
+                    }
+                    break;
+            }
+        }
+
+        function renderSplashScreen() {
+            ctx.fillStyle = '#000000'; // Black background
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (splashImageLoaded) {
+                ctx.globalAlpha = splashOpacity;
+                // This logic centers and scales the image correctly
+                const img = splashImage;
+                const canvasAspect = canvas.width / canvas.height;
+                const imgAspect = img.width / img.height;
+                let drawW, drawH;
+                if (canvasAspect > imgAspect) {
+                    drawH = canvas.height * 0.9;
+                    drawW = drawH * imgAspect;
+                } else {
+                    drawW = canvas.width * 0.9;
+                    drawH = drawW / imgAspect;
+                }
+                ctx.drawImage(img, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2, drawW, drawH);
+                ctx.globalAlpha = 1.0; // Reset transparency
+            }
+        }
+
+        function splashLoop(currentTime) {
+            if (splashPhase === 'finished') {
+                cancelAnimationFrame(splashLoopId);
+                ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear for main menu
+                return;
+            }
+
+            if (!lastSplashFrameTime) {
+                lastSplashFrameTime = currentTime;
+            }
+            const deltaTime = (currentTime - lastSplashFrameTime) / 1000; // Delta time in seconds
+            lastSplashFrameTime = currentTime;
+
+            updateSplashScreen(deltaTime);
+            renderSplashScreen();
+
+            splashLoopId = requestAnimationFrame(splashLoop);
+        }
+
         const blueChewImage = new Image();
         blueChewImage.src = 'https://nerdrealm419.github.io/BlueChew/bluechew.png';
         blueChewImage.onload = () => {
@@ -717,6 +805,12 @@
         
         initPageBackground();
         animatePageBackground();
+
+        // Initially hide the start screen so the splash screen can play first.
+        startScreen.style.display = 'none';
+
+        // Start the splash screen animation loop when the game loads.
+        splashLoop(performance.now());
 
         // Joystick elements
         const joystickContainer = document.getElementById('joystick-container');
