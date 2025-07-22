@@ -297,7 +297,7 @@
         
         // Check for mobile at load time to adjust game screen height.
         const isMobile = window.matchMedia("(pointer: coarse) and (max-width: 768px)").matches;
-        const UPSCALE_FACTOR = isMobile ? 7 : 5;         
+        const UPSCALE_FACTOR = isMobile ? 15 : 5;         
         const BASE_WIDTH = 600;
         // Use a square aspect ratio for mobile to make it taller, and the default for desktop.
         const BASE_HEIGHT = isMobile ? 600 : 480;
