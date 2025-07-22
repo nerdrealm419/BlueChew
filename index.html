@@ -64,6 +64,12 @@
         #high-score-display { background-color: rgba(0,0,0,0.3); padding: 5px 20px 15px; border-radius: 10px; width: 80%; max-width: 350px; margin-top: 15px; }
         #high-score-display h3 { margin-bottom: 10px; font-size: 20px; text-shadow: 2px 2px #000; }
         #scores-list p { margin: 5px 0; font-size: clamp(16px, 4vw, 18px); font-weight: bold; }
+        .medal {
+            margin-right: 15px; /* Adds space between the medal and the score */
+            display: inline-block;
+            width: 30px; /* Gives the medal a consistent space */
+            text-align: center;
+        }
         #scores-list .score-entry-1 { color: #FFD700; text-shadow: 1px 1px #a67c00; }
         #scores-list .score-entry-2 { color: #C0C0C0; text-shadow: 1px 1px #7d7d7d; }
         #scores-list .score-entry-3 { color: #CD7F32; text-shadow: 1px 1px #845421; }
@@ -210,11 +216,11 @@
                     <div id="high-score-display">
                         <h3>High Scores</h3>
                         <div id="scores-list">
-                            <p class="score-entry-1"><span class="score-name"></span> – <span class="score-value"></span></p>
-                            <p class="score-entry-2"><span class="score-name"></span> – <span class="score-value"></span></p>
-                            <p class="score-entry-3"><span class="score-name"></span> – <span class="score-value"></span></p>
-                            <p class="score-entry-4"><span class="score-name"></span> – <span class="score-value"></span></p>
-                            <p class="score-entry-5"><span class="score-name"></span> – <span class="score-value"></span></p>
+                            <p class="score-entry-1"><span class="medal"></span><span class="score-value"></span></p>
+                            <p class="score-entry-2"><span class="medal"></span><span class="score-value"></span></p>
+                            <p class="score-entry-3"><span class="medal"></span><span class="score-value"></span></p>
+                            <p class="score-entry-4"><span class="medal"></span><span class="score-value"></span></p>
+                            <p class="score-entry-5"><span class="medal"></span><span class="score-value"></span></p>
                         </div>
                     </div>
                     <div id="high-score-prompt" style="display: none;">
@@ -255,7 +261,7 @@
             <h2>Point System</h2>
             <ul>
                 <li><span class="item-icon" id="help-icon-pill"></span> Blue Chew Pill: +10 Points</li>
-                <li><span class="item-icon" style="background: radial-gradient(circle at 65% 35%, #87CEFA, #4169E1); border-radius: 50%;"></span> Blue Ball: Blocks points for 5s</li>
+                <li><span class="item-icon" id="help-icon-ball"></span> Blue Ball: Blocks points for 5s</li>
             </ul>
         </div>
     </div>
@@ -282,16 +288,19 @@
             const helpIcon = document.getElementById('help-icon-pill');
             if(helpIcon) helpIcon.style.backgroundImage = `url('${blueChewImage.src}')`;
         };
+        const blueBallImage = new Image();
+        blueBallImage.src = 'https://nerdrealm419.github.io/BlueChew/blueballs.png';
+        blueBallImage.onload = () => {
+            const helpIcon = document.getElementById('help-icon-ball');
+            if(helpIcon) helpIcon.style.backgroundImage = `url('${blueBallImage.src}')`;
+        };
         
-        const UPSCALE_FACTOR = 5; 
-        const BASE_WIDTH = 600;
-        
-        //-- START OF CHANGE --//
         // Check for mobile at load time to adjust game screen height.
         const isMobile = window.matchMedia("(pointer: coarse) and (max-width: 768px)").matches;
+        const UPSCALE_FACTOR = isMobile ? 7 : 5;         
+        const BASE_WIDTH = 600;
         // Use a square aspect ratio for mobile to make it taller, and the default for desktop.
         const BASE_HEIGHT = isMobile ? 600 : 480;
-        //-- END OF CHANGE --//
 
         const BASE_GRID_SIZE = 20;
         canvas.width = BASE_WIDTH * UPSCALE_FACTOR;
@@ -304,8 +313,8 @@
         const RAINBOW_COLORS = ['#87CEFA', '#4682B4', '#4169E1', '#0000CD', '#6495ED'];
         
         const ITEM_TYPES = {
-            BLUE_CHEW: { key: 'BLUE_CHEW', value: 10, probability: 0.90 },
-            BLUE_BALL: { key: 'BLUE_BALL', color: '#4169E1', effect: 'block_points', duration: 5000, probability: 0.10, isBad: true }
+            BLUE_CHEW: { key: 'BLUE_CHEW', value: 100, probability: 0.90 },
+            BLUE_BALL: { key: 'BLUE_BALL', color: '#4169E1', effect: 'block_points', duration: 5000, probability: 0.30, isBad: true }
         };
 
         const GAME_SETTINGS = {
@@ -325,30 +334,46 @@
         let lastFrameTime = 0;
         let accumulator = 0;
         
-        function getHighScores() { 
-            const scoresJSON = localStorage.getItem('gridtail_scores_v3'); 
-            if (scoresJSON) { return JSON.parse(scoresJSON); }
-            return Array(5).fill({ name: '---', score: 0 });
+        function getHighScores() {
+            // Use the new key we defined in saveHighScore
+            const scoresJSON = localStorage.getItem('gridtail_scores_v4');
+            if (scoresJSON) {
+                return JSON.parse(scoresJSON);
+            }
+            // If no scores exist, return an array of 5 zeros.
+            return [0, 0, 0, 0, 0]; 
         }
-        function saveHighScore(newScore, name) { 
-            if (newScore <= 0 || !name) return;
+        function saveHighScore(newScore) {
+            if (newScore <= 0) return;
+            let highScores = getHighScores();
+            // Add the new score and sort the array from highest to lowest
+            highScores.push(newScore);
+            highScores.sort((a, b) => b - a);
+            // Keep only the top 5 scores
+            const topFive = highScores.slice(0, 5);
+            // Save it back to localStorage. We'll use a new key to avoid conflicts.
+            localStorage.setItem('gridtail_scores_v4', JSON.stringify(topFive));
+        }
+        function updateHighScoreDisplay() {
+            // An array of medals for ranks 1 through 5
+            const medals = ['🥇', '🥈', '🥉', '🏅', '🏅'];
             const highScores = getHighScores();
-            highScores.push({ name: name.toUpperCase(), score: newScore }); 
-            highScores.sort((a, b) => b.score - a.score); 
-            const topFive = highScores.slice(0, 5); 
-            localStorage.setItem('gridtail_scores_v3', JSON.stringify(topFive)); 
-        }
-        function updateHighScoreDisplay() { 
-            const title = document.querySelector("#high-score-display h3");
-            if (title) title.textContent = `High Scores`;
 
-            const highScores = getHighScores();
             for (let i = 0; i < 5; i++) {
-                const entry = highScores[i] || { name: '---', score: 0 };
+                const scoreValue = highScores[i] || 0;
                 const p = document.querySelector(`#scores-list .score-entry-${i+1}`);
                 if (p) {
-                    p.querySelector('.score-name').textContent = entry.name;
-                    p.querySelector('.score-value').textContent = entry.score;
+                    const medalSpan = p.querySelector('.medal');
+                    const scoreSpan = p.querySelector('.score-value');
+
+                    // Only show a medal if the score is greater than 0
+                    if (scoreValue > 0) {
+                        medalSpan.textContent = medals[i];
+                    } else {
+                        medalSpan.textContent = ''; // No medal for zero scores
+                    }
+                    
+                    scoreSpan.textContent = scoreValue;
                 }
             }
         }
@@ -480,9 +505,9 @@
 
             while (!validPositionFound && attempts < MAX_ATTEMPTS) {
                 attempts++;
-                position = { 
-                    x: Math.floor(Math.random() * (canvas.width / GRID_SIZE)) * GRID_SIZE, 
-                    y: Math.floor(Math.random() * (canvas.height / GRID_SIZE)) * GRID_SIZE 
+                position = {
+                    x: (Math.floor(Math.random() * ((canvas.width / GRID_SIZE) - 2)) + 1) * GRID_SIZE,
+                    y: (Math.floor(Math.random() * ((canvas.height / GRID_SIZE) - 2)) + 1) * GRID_SIZE
                 };
 
                 const onSnake = meerca.some(s => s.x === position.x && s.y === position.y);
@@ -548,15 +573,12 @@
                     ctx.rotate(item.rotation || 0);
                     ctx.drawImage(blueChewImage, -imgWidth / 2, -imgHeight / 2, imgWidth, imgHeight);
                     ctx.restore();
-                } else if (item.type.key === 'BLUE_BALL') {
-                    const radius = GRID_SIZE / 2.2;
-                    const gradient = ctx.createRadialGradient(centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.1, centerX, centerY, radius);
-                    gradient.addColorStop(0, '#87CEFA');
-                    gradient.addColorStop(1, item.type.color);
-                    ctx.fillStyle = gradient;
-                    ctx.beginPath();
-                    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                    ctx.fill();
+                } else if (item.type.key === 'BLUE_BALL' && blueBallImage.complete) {
+                    // Draw the blue ball image, same size as the blue chew pill
+                    const imgWidth = GRID_SIZE * 1.5;
+                    const imgHeight = GRID_SIZE * 1.5;
+                    // Center the image in its grid position
+                    ctx.drawImage(blueBallImage, centerX - imgWidth / 2, centerY - imgHeight / 2, imgWidth, imgHeight);
                 }
             });
         }
@@ -570,30 +592,31 @@
             for (let i = 0; i < confettiCount; i++) { const c = document.createElement('div'); c.classList.add('confetti'); c.style.left = `${Math.random() * 100}vw`; c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)]; c.style.transform = `rotate(${Math.random() * 360}deg)`; container.appendChild(c); const anim = c.animate([ { top: '-10%', opacity: 1 }, { top: '110%', opacity: 1 } ], { duration: Math.random() * 3000 + 4000, easing: 'linear', delay: Math.random() * 2000 }); anim.onfinish = () => c.remove(); }
         }
 
-        function showGameOver() { 
-            cancelAnimationFrame(gameLoopRequestId); // Stop the animation frame loop
-            clearAllTimeouts(); // Clear any existing setTimeout/Intervals like for the blue ball effect
-            
-            updateHighScoreDisplay();
-            finalScoreDisplay.textContent = `Your Score: ${score}`; 
-            gameOverScreen.style.display = 'flex'; 
+        function showGameOver() {
+            cancelAnimationFrame(gameLoopRequestId);
+            clearAllTimeouts();
+
+            finalScoreDisplay.textContent = `Your Score: ${score}`;
+            gameOverScreen.style.display = 'flex';
 
             const highScores = getHighScores();
-            const lowestHighScore = highScores.length > 0 ? highScores[highScores.length - 1].score || 0 : 0;
+            // The lowest score is the last one in the sorted array
+            const lowestHighScore = highScores.length > 0 ? highScores[highScores.length - 1] : 0;
             const isNewHighScore = score > 0 && score > lowestHighScore;
-            const isNewFirstPlace = score > 0 && score > (highScores.length > 0 ? highScores[0].score || 0 : 0);
-
+            const isNewFirstPlace = score > 0 && score > (highScores.length > 0 ? highScores[0] : 0);
+            
             if (isNewFirstPlace) createConfettiEffect();
 
+            // If it's a new high score, save it automatically.
             if (isNewHighScore) {
-                highScorePrompt.style.display = 'block';
-                gameOverButtons.style.display = 'none';
-                playerNameInput.value = '';
-                playerNameInput.focus();
-            } else {
-                highScorePrompt.style.display = 'none';
-                gameOverButtons.style.display = 'block';
+                saveHighScore(score); // Correct new call, no name needed.
             }
+
+            updateHighScoreDisplay(); // Update display to show the new score
+            
+            // The prompt is no longer needed at all.
+            highScorePrompt.style.display = 'none';
+            gameOverButtons.style.display = 'block';
         }
         
         submitScoreButton.addEventListener('click', () => {
